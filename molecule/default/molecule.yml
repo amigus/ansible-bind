@@ -1,0 +1,181 @@
+---
+dependency:
+  name: galaxy
+
+lint: |
+  yamllint .
+
+driver:
+  name: podman
+
+platforms:
+  - name: forwarder_alpine
+    image: docker.io/library/alpine:latest
+    pre_build_image: true
+    command: sleep infinity
+  - name: rpz_alpine
+    image: docker.io/library/alpine:latest
+    pre_build_image: true
+    command: sleep infinity
+  - name: tls_alpine
+    image: docker.io/library/alpine:latest
+    pre_build_image: true
+    command: sleep infinity
+  - name: forwarder_rocky
+    image: docker.io/rockylinux/rockylinux:9
+    pre_build_image: true
+    command: sleep infinity
+  - name: rpz_rocky
+    image: docker.io/rockylinux/rockylinux:9
+    pre_build_image: true
+    command: sleep infinity
+  - name: tls_rocky
+    image: docker.io/rockylinux/rockylinux:9
+    pre_build_image: true
+    command: sleep infinity
+  - name: forwarder_tumbleweed
+    image: registry.opensuse.org/opensuse/tumbleweed:latest
+    pre_build_image: true
+    command: sleep infinity
+  - name: rpz_tumbleweed
+    image: registry.opensuse.org/opensuse/tumbleweed:latest
+    pre_build_image: true
+    command: sleep infinity
+  - name: tls_tumbleweed
+    image: registry.opensuse.org/opensuse/tumbleweed:latest
+    pre_build_image: true
+    command: sleep infinity
+
+provisioner:
+  name: ansible
+  config_options:
+    defaults:
+      interpreter_python: auto_silent
+  inventory:
+    hosts:
+      all:
+        hosts:
+        vars:
+          ansible_user: root
+    host_vars:
+      # Forwarder-only with logging
+      forwarder_alpine:
+        bind_forward_only: true
+        bind_forwarders: ["1.1.1.1", "9.9.9.9"]
+        bind_query_logging: true
+        bind_queries_logfile: "/var/log/named/queries.log"
+        bind_forward_zones:
+          - zone: example.com
+            forwarders: ["8.8.4.4"]
+            forward_only: true
+        bind_listen_interfaces: ["127.0.0.1"]
+        bind_listen_interfaces_v6: ["::1"]
+      forwarder_rocky:
+        bind_forward_only: true
+        bind_forwarders: ["1.1.1.1", "9.9.9.9"]
+        bind_query_logging: true
+        bind_queries_logfile: "/var/log/named/queries.log"
+        bind_primary_zones:
+          - zone: internal.test
+            allow_update: none
+        bind_listen_interfaces: ["127.0.0.1"]
+        bind_listen_interfaces_v6: ["::1"]
+      forwarder_tumbleweed:
+        bind_forward_only: false
+        bind_forwarders: ["208.67.222.222", "208.67.220.220"]
+        bind_secondary_zones:
+          - zone: corp.test
+            primaries: ["192.0.2.53"]
+            ixfr_from_differences: true
+        bind_listen_interfaces: ["127.0.0.1"]
+        bind_listen_interfaces_v6: ["::1"]
+
+      # RPZ primary + secondary with logging
+      rpz_alpine:
+        bind_acls:
+          local: ["localhost", "localnets"]
+        bind_query_acls: ["local"]
+        bind_recursion_acls: ["local"]
+        bind_response_policy_zones:
+          - zone: ads.rpz
+            url: https://example.com/blocklist.txt
+            genrpz: true
+            cron:
+              hour: "*/12"
+        bind_response_policy_secondary_zones:
+          - zone: malware.rpz
+            primaries: ["192.0.2.100"]
+            passthru: false
+        bind_rpz_domains: ["bad.example"]
+        bind_rpz_passthru_domains: ["ok.example"]
+        bind_rpz_logfile: "/var/log/named/rpz.log"
+        bind_rpz_passthru_logfile: "/var/log/named/rpz-passthru.log"
+      rpz_rocky:
+        bind_response_policy_zones:
+          - zone: social.rpz
+            url: https://example.com/social.txt
+            genrpz: true
+        bind_rpz_domains: ["block.me"]
+        bind_rpz_passthru_domains: ["let.me"]
+        bind_rpz_logfile: "/var/log/named/rpz.log"
+      rpz_tumbleweed:
+        bind_response_policy_secondary_zones:
+          - zone: ads.rpz
+            primaries: ["198.51.100.53"]
+          - zone: malware.rpz
+            primaries: ["198.51.100.54"]
+        bind_rpz_logfile: "/var/log/named/rpz.log"
+
+      # TLS/DoH with self-signed certs and DH params
+      tls_alpine:
+        bind_tls_common_name: localhost
+        bind_tls_subject_alt_name: ["DNS:localhost", "IP:127.0.0.1"]
+        bind_tls_dhparam_size: 1024
+        bind_tls:
+          - name: dns_tls
+            key_file: /etc/bind/dns_tls.key
+            cert_file: /etc/bind/dns_tls.crt
+            listen_interfaces: ["127.0.0.1"]
+            listen_interfaces_v6: ["::1"]
+        bind_http:
+          - name: local
+            tls: dns_tls
+      tls_rocky:
+        bind_tls_common_name: localhost
+        bind_tls_subject_alt_name: ["DNS:localhost", "IP:127.0.0.1"]
+        bind_tls:
+          - name: dns_tls
+            key_file: /etc/named/dns_tls.key
+            cert_file: /etc/named/dns_tls.crt
+            listen_interfaces: ["127.0.0.1"]
+            listen_interfaces_v6: ["::1"]
+        bind_http:
+          - name: local
+            tls: dns_tls
+      tls_tumbleweed:
+        bind_tls_common_name: localhost
+        bind_tls_subject_alt_name: ["DNS:localhost", "IP:127.0.0.1"]
+        bind_tls:
+          - name: dns_tls
+            key_file: /etc/named.d/dns_tls.key
+            cert_file: /etc/named.d/dns_tls.crt
+            listen_interfaces: ["127.0.0.1"]
+            listen_interfaces_v6: ["::1"]
+        bind_http:
+          - name: local
+            tls: dns_tls
+
+scenario:
+  name: default
+  test_sequence:
+    - dependency
+    - syntax
+    - create
+    - prepare
+    - converge
+    - verify
+    - cleanup
+    - destroy
+
+verifier:
+  name: ansible

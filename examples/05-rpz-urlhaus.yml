@@ -1,0 +1,28 @@
+---
+- name: Configure a BIND server with URLhaus RPZ updated hourly
+  hosts: bind
+  pre_tasks:
+    - name: Install BIND
+      tags: [install]
+      ansible.builtin.include_role:
+        name: amigus.bind
+        tasks_from: install
+  roles:
+    - role: amigus.bind
+  tasks:
+    - name: Install RPZ update scripts and cron jobs
+      ansible.builtin.include_role:
+        name: amigus.bind
+        tasks_from: rpz-scripts
+  vars:
+    bind_response_policy_zones:
+      - zone: urlhaus
+        url: https://urlhaus.abuse.ch/downloads/rpz/
+        cron:
+          minute: "0"
+          hour: "*"
+    bind_rpz_domains:
+      - badexample.test
+    bind_rpz_passthru_domains:
+      - allow.thisdomain.test
+    bind_rpz_passthru_logfile: /var/log/named/rpz-passthru

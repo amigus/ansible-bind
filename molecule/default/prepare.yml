@@ -1,0 +1,100 @@
+- name: Bootstrap containers
+  hosts: localhost
+  gather_facts: false
+  vars:
+    alpine_instances:
+      - forwarder_alpine
+      - rpz_alpine
+      - tls_alpine
+    rocky_instances:
+      - forwarder_rocky
+      - rpz_rocky
+      - tls_rocky
+    tumbleweed_instances:
+      - forwarder_tumbleweed
+      - rpz_tumbleweed
+      - tls_tumbleweed
+  tasks:
+    - name: Install Alpine base packages via podman unshare
+      ansible.builtin.command: >-
+        podman unshare podman exec {{ item }}
+        sh -c "apk update &&
+          apk upgrade -al &&
+          apk add --no-interactive sudo openrc python3"
+      register: podman_bootstrap_alpine
+      changed_when: >-
+        podman_bootstrap_alpine.rc == 0 and (
+          'Installing' in podman_bootstrap_alpine.stdout or
+          'Upgrading' in podman_bootstrap_alpine.stdout
+        )
+      failed_when: podman_bootstrap_alpine.rc != 0
+      loop: "{{ alpine_instances }}"
+      when: alpine_instances | length > 0
+
+    - name: Install Rocky base packages via podman unshare
+      ansible.builtin.command: >-
+        podman unshare podman exec {{ item }}
+        bash -lc "dnf upgrade -y &&
+          dnf install -y sudo python3"
+      register: podman_bootstrap_rocky
+      changed_when: >-
+        podman_bootstrap_rocky.rc == 0 and (
+          'Installed' in podman_bootstrap_rocky.stdout or
+          'Upgraded' in podman_bootstrap_rocky.stdout
+        )
+      failed_when: podman_bootstrap_rocky.rc != 0
+      loop: "{{ rocky_instances }}"
+      when: rocky_instances | length > 0
+
+    - name: Install Tumbleweed base packages via podman unshare
+      ansible.builtin.command: >-
+        podman unshare podman exec {{ item }}
+        bash -lc "zypper ref && zypper up -y &&
+          zypper in -y sudo python3 "
+      register: podman_bootstrap_tumbleweed
+      changed_when: >-
+        podman_bootstrap_tumbleweed.rc == 0 and (
+          'Installing' in podman_bootstrap_tumbleweed.stdout or
+          'Resolving dependencies' in podman_bootstrap_tumbleweed.stdout
+        )
+      failed_when: podman_bootstrap_tumbleweed.rc != 0
+      loop: "{{ tumbleweed_instances }}"
+      when: tumbleweed_instances | length > 0
+
+    - name: Configure sudo PAM stack on Rocky containers
+      ansible.builtin.shell: |
+        podman unshare podman exec {{ item }} bash -lc "cat <<'EOF' >/etc/pam.d/sudo
+        #%PAM-1.0
+        auth       sufficient   pam_rootok.so
+        auth       include      system-auth
+        account    include      system-auth
+        password   include      system-auth
+        session    include      system-auth
+        EOF"
+      args:
+        executable: /bin/bash
+      loop: "{{ rocky_instances }}"
+      when: rocky_instances | length > 0
+
+    - name: Configure sudo PAM stack on Tumbleweed containers
+      ansible.builtin.shell: |
+        podman unshare podman exec {{ item }} bash -lc "cat <<'EOF' >/etc/pam.d/sudo
+        #%PAM-1.0
+        auth       sufficient   pam_rootok.so
+        auth       include      common-auth
+        account    include      common-account
+        password   include      common-password
+        session    include      common-session
+        EOF"
+      args:
+        executable: /bin/bash
+      loop: "{{ tumbleweed_instances }}"
+      when: tumbleweed_instances | length > 0
+
+- name: Prepare hosts
+  hosts: all
+  gather_facts: false
+  become: true
+  tasks:
+    - name: Gather facts
+      ansible.builtin.setup:

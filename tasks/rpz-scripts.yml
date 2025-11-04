@@ -1,0 +1,88 @@
+---
+- name: Include OS family vars
+  tags: [always]
+  ansible.builtin.include_vars: "{{ ansible_facts.os_family }}.yml"
+
+- name: Setup RPZ management scripts
+  tags: [scripts]
+  when:
+    - (bind_response_policy_zones + bind_response_policy_secondary_zones) | length > 0
+    - bind_rpz_scripts_directory is defined
+  block:
+    - name: Setup the scripts directory
+      ansible.builtin.file:
+        path: "{{ bind_rpz_scripts_directory }}"
+        state: directory
+        mode: '0755'
+
+    - name: Copy genrpz.py
+      ansible.builtin.copy:
+        src: genrpz.py
+        dest: "{{ bind_rpz_scripts_directory }}/genrpz.py"
+        mode: '0755'
+      when: >
+        bind_response_policy_zones |
+        selectattr('genrpz', 'defined') |
+        selectattr('genrpz') | list | length > 0
+
+    - name: Copy update-rpz
+      ansible.builtin.copy:
+        src: update-rpz.sh
+        dest: "{{ bind_rpz_scripts_directory }}/update-rpz"
+        mode: '0755'
+
+- name: Setup RPZ update cron jobs
+  tags: [cron]
+  when: bind_response_policy_zones | selectattr('cron', 'defined') | list | length > 0
+  block:
+    - name: Generate RPZ update commands
+      ansible.builtin.set_fact:
+        bind_rpz_update_jobs: >
+          {{ bind_rpz_update_jobs | default([]) + [
+            {
+              'zone': item.zone,
+              'cmd': (
+                'GENRPZ_PY=' ~ bind_rpz_scripts_directory ~ '/genrpz.py ' ~
+                'RPZ_PERMS=0640 ' ~
+                'RPZ_USERGROUP=' ~ bind_usergroup ~ ' ' ~
+                'sh ' ~ bind_rpz_scripts_directory ~ '/update-rpz '
+                ~ bind_rpz_directory ~ '/' ~ item.zone ~ '.zone '
+                ~ item.url
+                ~ (
+                    (
+                      ' -Z '
+                      ~ item.zone
+                      ~ ' '
+                      ~ (item.genrpz_args | default(''))
+                    ) if (item.genrpz is defined and item.genrpz) else ''
+                  )
+              ),
+              'cron': item.cron
+            }
+          ] }}
+      loop: "{{ bind_response_policy_zones | selectattr('cron', 'defined') | list }}"
+
+    - name: Add cron jobs
+      ansible.builtin.cron:
+        name: "Update {{ item.zone }}"
+        minute: "{{ item.cron.minute }}"
+        hour: "{{ item.cron.hour | default('*') }}"
+        day: "{{ item.cron.day | default('*') }}"
+        month: "{{ item.cron.month | default('*') }}"
+        weekday: "{{ item.cron.weekday | default('*') }}"
+        job: "{{ item.cmd }} && RNDC reload {{ item.zone }}"
+        user: root
+      loop: "{{ bind_rpz_update_jobs }}"
+
+    - name: Check for existing zone files
+      ansible.builtin.stat:
+        path: "{{ bind_rpz_directory }}/{{ item.zone }}.zone"
+      register: bind_rpz_zone_files
+      loop: "{{ bind_rpz_update_jobs }}"
+
+    - name: Run update commands for missing zones
+      ansible.builtin.shell: "{{ item.item.cmd }}"
+      register: bind_rpz_update_cmd_result
+      changed_when: bind_rpz_update_cmd_result.rc == 0
+      loop: "{{ bind_rpz_zone_files.results }}"
+      when: not item.stat.exists

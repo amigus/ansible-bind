@@ -1,0 +1,11 @@
+$TTL 1h
+@                                           IN SOA   @ root (1 1h 1m 1h 1m)
+                                            IN NS    localhost.
+; allowed.domain                            IN CNAME rpz-passthru.
+; blocked.domain                            IN CNAME .
+{% for domain in bind_rpz_passthru_domains %}
+{{ "%-42s" % domain }}  IN CNAME rpz-passthru.
+{% endfor %}
+{% for domain in bind_rpz_domains %}
+{{ "%-42s" % domain }}  IN CNAME .
+{% endfor %}

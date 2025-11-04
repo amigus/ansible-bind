@@ -1,0 +1,145 @@
+---
+# BIND ACLs as a list of objects
+bind_acls: {}
+# e.g.,
+# - cloud:
+#     - 10.0.0.0/24
+# - clients:
+#     - 192.168.1.0/24
+# BIND has built-in ACLs like localhost, any and none; see:
+# https://bind9.readthedocs.io/en/latest/chapter7.html#access-control-lists
+
+# BIND forwarding; false means 'first' and true is 'only'
+bind_forward_only: false
+# BIND forwarders defined as a list of IP addresses
+bind_forwarders: []
+
+# BIND HTTP server configurations
+bind_http: []
+# e.g.,
+# - name: my-http # default 'local'
+#   listener-clients: 400 # default 300
+#   streams-per-connection: 200 # default 100
+# Setting it to [{}] results in a single listener named 'local'.
+
+# The IP address(es) BIND will listen on; an empty list means 'any', i.e., all interfaces.
+bind_listen_interfaces: []
+bind_listen_interfaces_v6: []
+
+# BIND forward zones defined as a list of objects
+bind_forward_zones: []
+# e.g.,
+# - zone: "example.com"
+#   forwarders:
+#     - 10.0.0.1
+#     - 10.0.0.2
+# - zone: "internal.corp.net"
+#   forward_only: true
+#   forwarders:
+#     - 10.0.0.3
+
+# BIND incremental zone transfers from differences
+bind_ixfr_from_differences: true
+# https://bind9.readthedocs.io/en/latest/chapter6.html#incremental-zone-transfers-ixfr
+
+# BIND named.root URL
+bind_named_root_url: "https://www.internic.net/domain/named.root"
+
+# BIND ACL for zone transfers
+bind_primary_zone_allow_update: none
+
+# BIND primary zones as a list of objects
+bind_primary_zones: []
+# e.g.,
+# - zone: example.com
+#   allow_transfer: cloud
+#   notify: true
+
+# BIND ACL for queries; an empty list means the built-in 'any'.
+bind_query_acls: []
+
+# BIND query logging on startup.
+bind_query_logging: false
+# https://bind9.readthedocs.io/en/latest/reference.html#namedconf-statement-querylog
+
+# BIND recursion ACLs; an empty list means the built-in 'any'.
+bind_recursion_acls: []
+
+# BIND response policy secondary zones as a list of objects
+bind_response_policy_secondary_zones: []
+# e.g.,
+# - zone: torblock.srv
+#   primaries: [34.194.195.25]
+
+# BIND response policy zones as a list of objects
+bind_response_policy_zones: []
+# e.g.,
+# - zone: urlhaus
+#   url: https://urlhaus.abuse.ch/downloads/rpz/
+#   cron:
+#     minute: "0"
+#     hour: "*"
+# - The zone file will be in the bind_rpz_zone_directory with the name <zone>.zone.
+# - A minimal definition of just the zone name configures BIND to assume an existing zone file.
+# - Adding a URL will cause the role to download and install the response policy zone file.
+# - Adding a cron schedule will cause the role to install a cron job to update the RPZ.
+
+# Domains to block in the response the local RPZ
+bind_rpz_domains: []
+# e.g.,
+# - badexample.test
+# - anotherbad.net
+
+# Group ownership for RPZ files.
+bind_rpz_group: "{{ bind_usergroup | default('named') }}"
+
+# Domains to allow through the RPZ
+bind_rpz_passthru_domains: []
+# e.g.,
+# - allow.thisdomain.test
+# - safe.example.org
+
+# File permissions for RPZ files.
+bind_rpz_perms: '0640'
+
+# BIND ACL for zone transfers; default is the built-in 'none'.
+bind_secondary_zone_allow_transfer: none
+
+# BIND secondary zones as a list of objects
+bind_secondary_zones: []
+# e.g.,
+# - zone: example.com
+#   allow_transfer: cloud
+#   notify: true
+#   masters:
+#     - 10.0.0.1
+
+# The name of the BIND service; typically 'named'.
+bind_service_name: named
+
+# BIND TLS configurations as a list of objects
+bind_tls: []
+# e.g.,
+# - name: my-tls
+#   cert_file: /etc/named.d/cert.pem
+#   ciphers: "HIGH:!kRSA:!aNULL:!eNULL:!RC4:!3DES:!MD5:!EXP:!PSK:!SRP:!DSS:!SHA1:!SHA256:!SHA384"
+#   dhparam_file: /etc/named.d/dhparam.pem
+#   key_file: /etc/named.d/key.pem
+
+# Size of Diffie-Hellman parameters to generate if dhparam_file is missing.
+bind_tls_dhparam_size: 2048
+
+# Type of private key to generate if key_file is missing.
+bind_tls_key_type: RSA
+
+# Size of private key to generate if key_file is missing.
+bind_tls_key_size: 2048
+
+# Validity period for self-signed certificates if cert_file is missing; 1825 days is 5 years.
+bind_tls_selfsigned_not_after: +1825d
+
+# Subject Alternative Names for TLS certificates
+bind_tls_subject_alt_name: []
+# e.g.,
+# - DNS:example.com
+# - IP:192.168.1.1

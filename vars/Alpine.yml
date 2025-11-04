@@ -1,0 +1,13 @@
+---
+bind_conf_file: /etc/bind/named.conf
+bind_directory: /var/bind
+bind_pid_file: /var/run/named/named.pid
+bind_primary_zone_127: /var/bind/pri/127.zone
+bind_primary_zone_directory: /var/bind/pri
+bind_primary_zone_localhost: /var/bind/pri/localhost.zone
+bind_named_root: /var/bind/named.ca
+bind_rpz_directory: /var/bind/dyn
+bind_rpz_logfile: /var/log/bind/rpz
+bind_rpz_scripts_directory: /etc/bind/scripts
+bind_secondary_zone_directory: /var/bind/sec
+bind_tls_dhparam_file: /etc/bind/dhparam.pem

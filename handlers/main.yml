@@ -1,0 +1,36 @@
+---
+- name: Enable and start named
+  ansible.builtin.service:
+    name: "{{ bind_service_name }}"
+    enabled: true
+    state: started
+  listen:
+    - RNDC reconfig
+    - RNDC reload
+
+- name: RNDC reconfig
+  ansible.builtin.command: RNDC reconfig
+  register: rndc_reconfig_result
+  failed_when: false
+  changed_when:
+    - rndc_reconfig_result.rc == 0
+    - rndc_reconfig_result.stdout.find('successful') != -1
+
+- name: RNDC reload
+  ansible.builtin.command: RNDC reload
+  register: rndc_reload_result
+  failed_when: false
+  changed_when:
+    - rndc_reload_result.rc == 0
+    - rndc_reload_result.stdout.find('successful') != -1
+
+- name: Restart named
+  ansible.builtin.service:
+    name: "{{ bind_service_name }}"
+    state: restarted
+  listen:
+    - RNDC reconfig
+    - RNDC reload
+  when: >-
+    rndc_reload_result is defined and rndc_reload_result.rc != 0
+    or rndc_reconfig_result is defined and rndc_reconfig_result.rc != 0

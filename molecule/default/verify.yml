@@ -1,0 +1,105 @@
+---
+- name: Verify configuration rendering
+  hosts: all
+  gather_facts: true
+  tasks:
+    - name: Include OS-specific vars for paths
+      ansible.builtin.include_vars: "{{ ansible_os_family }}.yml"
+
+    - name: Extract test profile from hostname
+      ansible.builtin.set_fact:
+        test_profile: "{{ inventory_hostname.split('_')[0] }}"
+
+    - name: Read named.conf
+      ansible.builtin.slurp:
+        src: "{{ bind_conf_file }}"
+      register: named_conf
+
+    - name: Assert forwarder-only config is rendered
+      ansible.builtin.assert:
+        that:
+          - named_conf.content | b64decode is search('forward only;')
+          - named_conf.content | b64decode is search('forwarders')
+        success_msg: "forwarders and forward only present"
+        fail_msg: "forwarders or forward only missing"
+      when: test_profile == 'forwarder'
+
+    - name: Assert queries logging channel when configured
+      ansible.builtin.assert:
+        that:
+          - named_conf.content | b64decode is search('category queries')
+        success_msg: "queries logging present"
+        fail_msg: "queries logging missing"
+      when:
+        - test_profile == 'forwarder'
+        - bind_query_logging | default(false)
+        - bind_queries_logfile is defined
+
+    - name: Verify RPZ base zone file exists
+      ansible.builtin.stat:
+        path: "{{ bind_primary_zone_directory }}/rpz.zone"
+      register: rpz_zone_stat
+      when: test_profile == 'rpz'
+
+    - name: Read RPZ base zone file
+      ansible.builtin.slurp:
+        src: "{{ bind_primary_zone_directory }}/rpz.zone"
+      register: rpz_zone
+      when:
+        - test_profile == 'rpz'
+        - rpz_zone_stat.stat.exists
+
+    - name: Assert RPZ passthru and blocked entries rendered
+      ansible.builtin.assert:
+        that:
+          - rpz_zone.content | b64decode is search('rpz-passthru')
+          - rpz_zone.content | b64decode is search(' CNAME .')
+        success_msg: "RPZ base zone contains passthru and blocked entries"
+        fail_msg: "RPZ base zone missing expected entries"
+      when: test_profile == 'rpz'
+
+    - name: Set TLS test item
+      ansible.builtin.set_fact:
+        tls_item: "{{ (bind_tls | default([])) | first | default({}) }}"
+      when: test_profile == 'tls'
+
+    - name: Verify TLS key exists
+      ansible.builtin.stat:
+        path: "{{ tls_item.key_file }}"
+      register: tls_key_stat
+      when: test_profile == 'tls'
+
+    - name: Verify TLS cert exists
+      ansible.builtin.stat:
+        path: "{{ tls_item.cert_file }}"
+      register: tls_cert_stat
+      when: test_profile == 'tls'
+
+    - name: Assert TLS artifacts present and named.conf contains TLS blocks
+      ansible.builtin.assert:
+        that:
+          - tls_key_stat.stat.exists
+          - tls_cert_stat.stat.exists
+          - named_conf.content | b64decode is search('tls {{ tls_item.name }}')
+          - named_conf.content | b64decode is search('listen-on tls {{ tls_item.name }}')
+        success_msg: "TLS key/cert exist and configuration rendered"
+        fail_msg: "TLS key/cert missing or configuration not rendered"
+      when: test_profile == 'tls'
+
+    - name: Verify DH param file exists when configured
+      ansible.builtin.stat:
+        path: "{{ bind_tls_dhparam_file | default('') }}"
+      register: dhparam_stat
+      when:
+        - test_profile == 'tls'
+        - bind_tls_dhparam_file is defined
+
+    - name: Assert DH params exist
+      ansible.builtin.assert:
+        that:
+          - dhparam_stat.stat.exists
+        success_msg: "DH params generated"
+        fail_msg: "DH params missing"
+      when:
+        - test_profile == 'tls'
+        - bind_tls_dhparam_file is defined

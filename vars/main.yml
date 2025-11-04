@@ -1,0 +1,3 @@
+---
+bind_dnssec_validation: false
+bind_usergroup: named

@@ -1,0 +1,27 @@
+---
+- name: Configure a BIND server
+  hosts: bind
+  pre_tasks:
+    - name: Install BIND
+      tags: [install]
+      ansible.builtin.include_role:
+        name: amigus.bind
+        tasks_from: install
+  roles:
+    - role: amigus.bind
+  vars:
+    bind_forwarders:
+      - 1.1.1.1
+      - 9.9.9.9
+    bind_forward_only: true
+    bind_tls_common_name: "dns.local"
+    bind_tls_subject_alt_name:
+      - DNS:dns.local
+      - IP:127.0.0.1
+    bind_tls:
+      - name: dot_local
+        key_file: /etc/named/dot_local.key
+        cert_file: /etc/named/dot_local.crt
+    bind_http:
+      - name: doh_local
+        tls: dot_local

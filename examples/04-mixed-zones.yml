@@ -1,0 +1,37 @@
+---
+- name: Configure a BIND server
+  hosts: bind
+  pre_tasks:
+    - name: Install BIND
+      tags: [install]
+      ansible.builtin.include_role:
+        name: amigus.bind
+        tasks_from: install
+  roles:
+    - role: amigus.bind
+  vars:
+    bind_acls:
+      trusted:
+        - 10.0.0.0/24
+    bind_forwarders:
+      - 8.8.8.8
+      - 8.8.4.4
+    bind_forward_only: false
+    bind_forward_zones:
+      - zone: "lab.internal"
+        forwarders: [10.0.10.1, 10.0.10.12]
+        forward_only: true
+    bind_primary_zone_allow_update: none
+    bind_primary_zones:
+      - zone: example.org
+      - zone: corp.internal
+        allow_update: key rndc-key
+    bind_query_acls:
+      - trusted
+    bind_secondary_zone_allow_transfer: none
+    bind_secondary_zones:
+      - zone: delegated.example.org
+        primaries: [10.0.0.10, 10.0.0.11]
+        allow_transfer: trusted
+    bind_recursion_acls:
+      - trusted

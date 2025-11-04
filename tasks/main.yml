@@ -1,0 +1,50 @@
+---
+- name: Include OS family vars
+  tags: [always]
+  ansible.builtin.include_vars: "{{ ansible_facts.os_family }}.yml"
+
+- name: Setup named.conf
+  tags: [conf]
+  ansible.builtin.template:
+    src: conf.j2
+    dest: "{{ bind_conf_file }}"
+    group: "{{ bind_usergroup }}"
+    mode: '0640'
+  notify: RNDC reconfig
+
+- name: Setup the local RPZ zone
+  tags: [rpz]
+  ansible.builtin.template:
+    src: rpz.j2
+    dest: "{{ bind_primary_zone_directory }}/rpz.zone"
+    owner: root
+    group: "{{ bind_usergroup }}"
+    mode: '0640'
+  notify: RNDC reload
+
+- name: Update the named.root file
+  tags: [namedroot, never]
+  ansible.builtin.get_url:
+    backup: true
+    dest: "{{ bind_named_root }}"
+    force: true
+    mode: '0644'
+    url: "{{ bind_named_root_url }}"
+  when: bind_named_root is defined and not bind_forward_only
+  notify: RNDC reload
+
+- name: Ensure that all log directories are writable by the named user
+  tags: [install, logs]
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    group: "{{ bind_usergroup | default('named') }}"
+    mode: '0770'
+  loop: >
+    {{
+      [
+        bind_queries_logfile,
+        bind_rpz_logfile,
+        bind_rpz_passthru_logfile
+      ] | select('defined') | map('ansible.builtin.dirname') | unique | list
+    }}

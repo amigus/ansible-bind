@@ -1,0 +1,11 @@
+---
+- name: Configure a BIND server
+  hosts: bind
+  pre_tasks:
+    - name: Install BIND
+      tags: [install]
+      ansible.builtin.include_role:
+        name: amigus.bind
+        tasks_from: install
+  roles:
+    - role: amigus.bind

@@ -1,0 +1,322 @@
+---
+argument_specs:
+  main:
+    short_description: Install and configure BIND on Linux
+    description: >
+      Install and configure the BIND DNS server (BIND 9) as a caching resolver, forwarder,
+      and/or authoritative server with optional DNS-over-TLS/HTTP and Response Policy Zones.
+    version_added: "1.0.0"
+    author: Adam Migus <adam@migus.org>
+    options:
+      bind_usergroup:
+        type: str
+        default: named
+        description: Primary group for BIND files and directories.
+      bind_service_name:
+        type: str
+        default: named
+        description: Service name for the named daemon.
+      bind_dnssec_validation:
+        type: bool
+        default: false
+        description: Enable DNSSEC validation (yes/no/auto handled in template; bool maps to yes/no).
+      bind_acls:
+        type: dict
+        default: {}
+        description: Mapping of ACL name to list of members (strings) rendered as acl blocks.
+      bind_query_acls:
+        type: list
+        elements: str
+        default: []
+        description: ACLs allowed to query.
+      bind_recursion_acls:
+        type: list
+        elements: str
+        default: []
+        description: ACLs allowed to recurse (clients permitted to use the resolver).
+      bind_query_logging:
+        type: bool
+        default: false
+        description: Enable query logging category.
+      bind_queries_logfile:
+        type: str
+        required: false
+        description: Path to queries log file; directory will be created if missing.
+      bind_queries_logfile_arguments:
+        type: str
+        required: false
+        description: Additional file() args for queries channel (e.g., "versions unlimited").
+      bind_listen_interfaces:
+        type: list
+        elements: str
+        default: []
+        description: IPv4 listen addresses; defaults to any if empty and listeners present.
+      bind_listen_interfaces_v6:
+        type: list
+        elements: str
+        default: []
+        description: IPv6 listen addresses; defaults to any if empty and listeners present.
+      bind_forward_only:
+        type: bool
+        default: false
+        description: Use forward only (do not recurse to roots when forwarders fail).
+      bind_forwarders:
+        type: list
+        elements: str
+        default: []
+        description: List of forwarder IPs.
+      bind_forward_zones:
+        type: list
+        elements: dict
+        default: []
+        description: Forward zones mapping names to forwarders.
+        options:
+          zone:
+            type: str
+            required: true
+          forwarders:
+            type: list
+            elements: str
+            required: true
+          forward_only:
+            type: bool
+            required: false
+      bind_primary_zone_allow_update:
+        type: str
+        default: none
+        description: Default allow-update for primary zones.
+      bind_primary_zones:
+        type: list
+        elements: dict
+        default: []
+        description: Primary zones to host locally.
+        options:
+          zone:
+            type: str
+            required: true
+          allow_update:
+            type: str
+            required: false
+      bind_secondary_zone_allow_transfer:
+        type: str
+        default: none
+        description: Default allow-transfer for secondary zones.
+      bind_ixfr_from_differences:
+        type: bool
+        default: true
+        description: Enable IXFR-from-differences by default for secondaries.
+      bind_secondary_zones:
+        type: list
+        elements: dict
+        default: []
+        description: Secondary zones served locally.
+        options:
+          zone:
+            type: str
+            required: true
+          primaries:
+            type: list
+            elements: str
+            required: true
+          allow_transfer:
+            type: str
+            required: false
+          ixfr_from_differences:
+            type: bool
+            required: false
+      bind_named_root:
+        type: str
+        required: false
+        description: Path to root hints file (type hint zone ".").
+      bind_named_root_url:
+        type: str
+        default: https://www.internic.net/domain/named.root
+        description: Source URL for root hints (used when tag namedroot is applied).
+      bind_response_policy_zones:
+        type: list
+        elements: dict
+        default: []
+        description: Primary RPZ zones to generate locally.
+        options:
+          zone:
+            type: str
+            required: true
+          url:
+            type: str
+            required: false
+          genrpz:
+            type: bool
+            required: false
+          genrpz_args:
+            type: str
+            required: false
+          passthru:
+            type: bool
+            required: false
+          cron:
+            type: dict
+            required: false
+            options:
+              minute: {type: str, required: true}
+              hour: {type: str, required: false}
+              day: {type: str, required: false}
+              month: {type: str, required: false}
+              weekday: {type: str, required: false}
+      bind_response_policy_secondary_zones:
+        type: list
+        elements: dict
+        default: []
+        description: Secondary RPZ zones pulled from primaries.
+        options:
+          zone:
+            type: str
+            required: true
+          primaries:
+            type: list
+            elements: str
+            required: true
+          passthru:
+            type: bool
+            required: false
+      bind_rpz_domains:
+        type: list
+        elements: str
+        default: []
+        description: Local domains in RPZ base zone to block (CNAME .).
+      bind_rpz_passthru_domains:
+        type: list
+        elements: str
+        default: []
+        description: Local domains in RPZ base zone to passthru (CNAME rpz-passthru.).
+      bind_rpz_group:
+        type: str
+        default: "{{ bind_usergroup | default('named') }}"
+        description: Group owner for generated RPZ files.
+      bind_rpz_perms:
+        type: str
+        default: '0640'
+        description: File mode for generated RPZ files.
+      bind_rpz_logfile:
+        type: str
+        required: false
+        description: Log file for rpz category logging.
+      bind_rpz_logfile_arguments:
+        type: str
+        required: false
+        description: Additional file() args for rpz channel.
+      bind_rpz_passthru_logfile:
+        type: str
+        required: false
+        description: Log file for rpz-passthru category logging.
+      bind_rpz_passthru_logfile_arguments:
+        type: str
+        required: false
+        description: Additional file() args for rpz-passthru channel.
+      bind_rpz_directory:
+        type: str
+        required: false
+        description: Directory where generated RPZ primary zone files are stored.
+      bind_rpz_scripts_directory:
+        type: str
+        required: false
+        description: Directory to install RPZ maintenance scripts (genrpz.py, update-rpz).
+      bind_tls:
+        type: list
+        elements: dict
+        default: []
+        description: TLS contexts for DoT/DoH listeners.
+        options:
+          name:
+            type: str
+            required: true
+          key_file:
+            type: str
+            required: true
+          cert_file:
+            type: str
+            required: true
+          ca_file:
+            type: str
+            required: false
+          common_name:
+            type: str
+            required: false
+          subject_alt_name:
+            type: list
+            elements: str
+            required: false
+      bind_tls_ciphers:
+        type: str
+        required: false
+        description: OpenSSL cipher string to use for TLS contexts.
+      bind_tls_prefer_server_ciphers:
+        type: bool
+        default: false
+        description: Prefer server ciphers when negotiating TLS.
+      bind_tls_session_tickets:
+        type: bool
+        default: false
+        description: Enable TLS session tickets.
+      bind_http:
+        type: list
+        elements: dict
+        default: []
+        description: HTTP endpoints bound to TLS contexts for DoH.
+        options:
+          name: {type: str, required: false}
+          tls: {type: str, required: false}
+          listener_clients: {type: int, required: false}
+          streams_per_connection: {type: int, required: false}
+          listen_interfaces: {type: list, elements: str, required: false}
+          listen_interfaces_v6: {type: list, elements: str, required: false}
+      bind_tls_common_name:
+        type: str
+        required: false
+        description: Common Name used when generating self-signed certs (if item.common_name is not set).
+      bind_tls_subject_alt_name:
+        type: list
+        elements: str
+        default: []
+        description: SANs for self-signed certs.
+      bind_tls_key_type:
+        type: str
+        default: RSA
+        description: Private key type for self-signed certs.
+      bind_tls_key_size:
+        type: int
+        default: 2048
+        description: Private key size for self-signed certs.
+      bind_tls_selfsigned_not_after:
+        type: str
+        default: "+1825d"
+        description: Certificate validity when using self-signed provider.
+      bind_tls_dhparam_file:
+        type: str
+        required: false
+        description: Path to DH parameter file used by TLS contexts (OS default provided).
+      bind_tls_dhparam_size:
+        type: int
+        default: 2048
+        description: Size in bits for generated DH parameter file.
+      # OS path variables (overridable)
+      bind_conf_file:
+        type: str
+        required: false
+      bind_directory:
+        type: str
+        required: false
+      bind_pid_file:
+        type: str
+        required: false
+      bind_primary_zone_directory:
+        type: str
+        required: false
+      bind_secondary_zone_directory:
+        type: str
+        required: false
+      bind_primary_zone_127:
+        type: str
+        required: false
+      bind_primary_zone_localhost:
+        type: str
+        required: false

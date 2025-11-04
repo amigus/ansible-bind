@@ -1,0 +1,216 @@
+// Generated on {{ ansible_fqdn }} with Ansible {{ ansible_version.full }}
+{% for name, items in bind_acls.items() %}
+acl {{ name }} {
+{% for item in items %}
+    {{ item }};
+{% endfor -%}
+};
+
+{% endfor %}
+{% for http in bind_http %}
+http {{ http.name | default('local') }} {
+    {{- 'listener-clients ' ~ http.listener_clients ~ ';' if (http.listener_clients | default(300)) != 300 }}
+    {{- 'streams-per-connection ' ~ http.streams_per_connection ~ ';' if (http.streams_per_connection | default(100)) != 100 -}}
+};
+
+{% endfor %}
+{% for tls in bind_tls %}
+tls {{ tls.name }} {
+{% if tls.ca_file is defined %}
+    ca-file "{{ tls.ca_file }}";
+{% endif %}
+    cert-file "{{ tls.cert_file }}";
+{% if bind_tls_ciphers is defined %}
+    ciphers "{{ bind_tls_ciphers }}";
+{% endif %}
+{% if bind_tls_prefer_server_ciphers | default(false) %}
+    prefer-server-ciphers yes;
+{% endif %}
+    dhparam-file "{{ bind_tls_dhparam_file }}";
+    key-file "{{ tls.key_file }}";
+{% if bind_tls_session_tickets | default(false) %}
+    session-tickets yes;
+{% endif -%}
+};
+
+{% endfor %}
+options {
+{% if bind_query_acls | length > 0 %}
+    allow-query { {% for acl in bind_query_acls %}{{ acl }}; {% endfor -%} };
+{% endif %}
+{% if bind_recursion_acls | length > 0 %}
+    allow-recursion { {% for acl in bind_recursion_acls %}{{ acl }}; {% endfor -%} };
+{% endif %}
+    directory "{{ bind_directory }}";
+    dnssec-validation {{ 'auto' if bind_dnssec_validation is undefined else 'yes' if bind_dnssec_validation else 'no' }};
+{% macro render_forwarders(forwarders) -%}
+    forwarders { {% for fwd in forwarders %}{{ fwd }}; {% endfor -%} };
+{%- endmacro -%}
+{% if bind_forwarders | length > 0 %}
+    forward {{ 'only' if bind_forward_only else 'first' }};
+    {{ render_forwarders(bind_forwarders) }}
+{% endif %}
+    ixfr-from-differences {{ 'yes' if bind_ixfr_from_differences is defined and bind_ixfr_from_differences else 'no' }};
+{% macro render_ifaces(ifaces) -%}
+{% if ifaces | length > 0 %}
+{% for iface in ifaces %} {{ iface }};{% endfor %}
+{% else %}
+any;
+{%- endif %}
+{% endmacro -%}
+{% if bind_listen_interfaces | length > 0 or bind_http | length > 0 or bind_tls | length > 0 %}
+    listen-on { {{ render_ifaces(bind_listen_interfaces) }} };
+{% for http in bind_http %}
+    listen-on tls {{ http.tls | default('ephemeral') }} http {{ http.name | default('local') }} { {{ render_ifaces(http.listen_interfaces | default(bind_listen_interfaces)) }} };
+{% endfor %}
+{% for tls in bind_tls %}
+    listen-on tls {{ tls.name | default('ephemeral') }} { {{ render_ifaces(tls.listen_interfaces | default(bind_listen_interfaces)) }} };
+{% endfor %}
+{% endif %}
+{% if bind_listen_interfaces_v6 | length > 0 or bind_http | length > 0 or bind_tls | length > 0 %}
+    listen-on-v6 { {{ render_ifaces(bind_listen_interfaces_v6) }} };
+{% for http in bind_http %}
+    listen-on-v6 tls {{ http.tls | default('ephemeral') }} http {{ http.name | default('local') }} { {{ render_ifaces(http.listen_interfaces_v6 | default(bind_listen_interfaces_v6)) }} };
+{% endfor %}
+{% for tls in bind_tls %}
+    listen-on-v6 tls {{ tls.name | default('ephemeral') }} { {{ render_ifaces(tls.listen_interfaces_v6 | default(bind_listen_interfaces_v6)) }} };
+{% endfor %}
+{% endif %}
+    pid-file "{{ bind_pid_file }}";
+    querylog {{ 'yes' if bind_query_logging else 'no' }};
+{% if bind_response_policy_zones | length > 0 or
+        bind_response_policy_secondary_zones | length > 0 %}
+    response-policy {
+        zone "rpz";
+{% for rpz in bind_response_policy_zones %}
+        zone "{{ rpz.zone }}"{% if (rpz.passthru|default(false)) %} policy passthru{% endif %};
+{% endfor -%}
+{% for rpz in bind_response_policy_secondary_zones %}
+        zone "{{ rpz.zone }}"{% if (rpz.passthru|default(false)) %} policy passthru{% endif %};
+{% endfor %}
+    };
+{% endif -%}
+};
+
+{% if bind_queries_logfile is defined or bind_rpz_logfile is defined or 
+        bind_rpz_passthru_logfile is defined %}
+logging {
+{% if bind_queries_logfile is defined %}
+    channel queries_log {
+        file "{{ bind_queries_logfile }}" {{ bind_queries_logfile_arguments | default('versions unlimited') }};
+        print-time yes;
+        print-category yes;
+        print-severity yes;
+        severity info;
+    };
+    category queries { queries_log; };
+{% endif %}
+{% if bind_rpz_logfile is defined %}
+    channel rpz_log {
+        file "{{ bind_rpz_logfile }}" {{ bind_rpz_logfile_arguments | default('versions unlimited') }};
+        print-time yes;
+        print-category yes;
+        print-severity yes;
+        severity info;
+    };
+    category rpz { rpz_log; };
+{% endif %}
+{% if bind_rpz_passthru_logfile is defined %}
+    channel rpz_passthru_log {
+        file "{{ bind_rpz_passthru_logfile }}" {{ bind_rpz_passthru_logfile_arguments | default('versions unlimited') }};
+        print-time yes;
+        print-category yes;
+        print-severity yes;
+        severity info;
+    };
+    category rpz-passthru { rpz_passthru_log; };
+{% endif -%}
+};
+
+{% endif %}
+{% if bind_named_root is defined and not bind_forward_only %}
+zone "." IN {
+    type hint;
+    file "{{ bind_named_root }}";
+};
+
+{% endif %}
+zone "localhost" IN {
+    type primary;
+    file "{{ bind_primary_zone_localhost }}";
+    allow-update { none; };
+    notify no;
+};
+
+zone "1.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.ip6.arpa" IN {
+    type primary;
+    file "{{ bind_primary_zone_127 }}";
+    allow-update { none; };
+};
+
+zone "127.in-addr.arpa" IN {
+    type primary;
+    file "{{ bind_primary_zone_127 }}";
+    allow-update { none; };
+    notify no;
+};
+{% for item in bind_forward_zones %}
+
+zone "{{ item.zone }}" IN {
+    type forward;
+    forward {{ 'only' if item.forward_only | default(false) else 'first' }};
+    {{ render_forwarders(item.forwarders) }}
+};
+{% endfor %}
+{% for item in bind_primary_zones %}
+
+zone "{{ item.zone }}" IN {
+    type primary;
+    file "{{ bind_primary_zone_directory }}/{{ item.zone }}.zone";
+    allow-transfer { {{ item.allow_transfer | default(bind_primary_zone_allow_transfer) }}; };
+    allow-update { {{ item.allow_update | default(bind_primary_zone_allow_update) }}; };
+    ixfr-from-differences {{ 'yes' if item.ixfr_from_differences | default(bind_ixfr_from_differences) else 'no' }};
+    notify {{ 'yes' if item.notify | default(false) else 'no' }};
+};
+{% endfor %}
+{% for item in bind_secondary_zones %}
+
+zone "{{ item.zone }}" IN {
+    type secondary;
+    file "{{ bind_secondary_zone_directory }}/{{ item.zone }}.db";
+    allow-transfer { {{ item.allow_transfer | default(bind_secondary_zone_allow_transfer) }}; };
+    ixfr-from-differences {{ 'yes' if item.ixfr_from_differences | default(bind_ixfr_from_differences) else 'no' }};
+    primaries { {% for primary in item.primaries %}{{ primary }}; {% endfor %}};
+};
+{% endfor %}
+{% if bind_response_policy_zones | length > 0 or
+        bind_response_policy_secondary_zones | length > 0 %}
+
+zone "rpz" in {
+    type primary;
+    file "{{ bind_primary_zone_directory }}/rpz.zone";
+    allow-transfer { none; };
+    allow-query { localhost; };
+    notify no;
+};
+{% for rpz in bind_response_policy_zones %}
+
+zone "{{ rpz.zone }}" IN {
+    type primary;
+    file "{{ bind_rpz_directory }}/{{ rpz.zone }}.zone";
+    allow-transfer { none; };
+    allow-query { localhost; };
+    notify no;
+};
+{% endfor %}
+{% for rpz in bind_response_policy_secondary_zones %}
+
+zone "{{ rpz.zone }}" IN {
+    type secondary;
+    file "{{ bind_secondary_zone_directory }}/{{ rpz.zone }}.db";
+    allow-transfer { none; };
+    allow-query { localhost; };
+    primaries { {% for primary in rpz.primaries %}{{ primary }}; {% endfor %}};
+};
+{% endfor %}
+{% endif -%}

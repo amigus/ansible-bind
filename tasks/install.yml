@@ -1,0 +1,22 @@
+---
+- name: Install named
+  tags: [install]
+  ansible.builtin.package:
+    name: bind
+    state: present
+
+- name: Install cron
+  tags: [install, cron]
+  when: bind_response_policy_zones | selectattr('cron', 'defined') | list | length > 0
+  block:
+    - name: Install cron on OpenSUSE
+      when: ansible_facts.os_family == 'Suse'
+      ansible.builtin.package:
+        name: cron
+        state: present
+
+    - name: Install cronie on RedHat
+      when: ansible_facts.os_family == 'RedHat'
+      ansible.builtin.package:
+        name: cronie
+        state: present

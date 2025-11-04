@@ -1,0 +1,31 @@
+---
+galaxy_info:
+  role_name: bind
+  namespace: amigus
+  author: Adam Migus <adam@migus.org>
+  description: Install and configure BIND 9 on Linux
+  license: MIT
+  min_ansible_version: '2.16'
+  github_branch: main
+  platforms:
+    - name: Alpine
+      versions:
+        - 'all'
+    - name: Amazon Linux
+      versions:
+        - '2023'
+    - name: opensuse
+      versions:
+        - 'all'
+    - name: Rocky
+      versions:
+        - 'all'
+  galaxy_tags:
+    - bind
+    - dns
+    - networking
+    - rpz
+    - security
+collections:
+  - community.crypto
+dependencies: []
