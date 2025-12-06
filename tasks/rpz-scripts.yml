@@ -42,20 +42,14 @@
             {
               'zone': item.zone,
               'cmd': (
-                'GENRPZ_PY=' ~ bind_rpz_scripts_directory ~ '/genrpz.py ' ~
-                'RPZ_PERMS=0640 ' ~
-                'RPZ_USERGROUP=' ~ bind_usergroup ~ ' ' ~
-                'sh ' ~ bind_rpz_scripts_directory ~ '/update-rpz '
-                ~ bind_rpz_directory ~ '/' ~ item.zone ~ '.zone '
-                ~ item.url
-                ~ (
-                    (
-                      ' -Z '
-                      ~ item.zone
-                      ~ ' '
-                      ~ (item.genrpz_args | default(''))
-                    ) if (item.genrpz is defined and item.genrpz) else ''
-                  )
+                'GENRPZ_PY=' ~ bind_rpz_scripts_directory ~ '/genrpz.py '
+                if (item.genrpz is defined and item.genrpz) else '' ~
+                'RPZ_PERMS=0640 ' ~ 'RPZ_USERGROUP=' ~ bind_usergroup ~ ' ' ~
+                'sh ' ~ bind_rpz_scripts_directory ~ '/update-rpz ' ~
+                bind_rpz_directory ~ '/' ~ item.zone ~ '.zone ' ~ item.url ~
+                (
+                  ' -Z ' ~ item.zone ~ ' ' ~ (item.genrpz_args | default(''))
+                ) if (item.genrpz is defined and item.genrpz) else ''
               ),
               'cron': item.cron
             }
