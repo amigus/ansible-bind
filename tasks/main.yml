@@ -9,7 +9,7 @@
     src: conf.j2
     dest: "{{ bind_conf_file }}"
     group: "{{ bind_usergroup }}"
-    mode: '0640'
+    mode: "0640"
   notify: RNDC reconfig
 
 - name: Setup the local RPZ zone
@@ -19,7 +19,7 @@
     dest: "{{ bind_primary_zone_directory }}/rpz.zone"
     owner: root
     group: "{{ bind_usergroup }}"
-    mode: '0640'
+    mode: "0640"
   notify: RNDC reload
 
 - name: Update the named.root file
@@ -28,7 +28,7 @@
     backup: true
     dest: "{{ bind_named_root }}"
     force: true
-    mode: '0644'
+    mode: "0644"
     url: "{{ bind_named_root_url }}"
   when: bind_named_root is defined and not bind_forward_only
   notify: RNDC reload
@@ -39,7 +39,7 @@
     path: "{{ item }}"
     state: directory
     group: "{{ bind_usergroup | default('named') }}"
-    mode: '0770'
+    mode: "0770"
   loop: >
     {{
       [

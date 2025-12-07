@@ -13,13 +13,13 @@
       ansible.builtin.file:
         path: "{{ bind_rpz_scripts_directory }}"
         state: directory
-        mode: '0755'
+        mode: "0755"
 
     - name: Copy genrpz.py
       ansible.builtin.copy:
         src: genrpz.py
         dest: "{{ bind_rpz_scripts_directory }}/genrpz.py"
-        mode: '0755'
+        mode: "0755"
       when: >
         bind_response_policy_zones |
         selectattr('genrpz', 'defined') |
@@ -29,7 +29,7 @@
       ansible.builtin.copy:
         src: update-rpz.sh
         dest: "{{ bind_rpz_scripts_directory }}/update-rpz"
-        mode: '0755'
+        mode: "0755"
 
 - name: Setup RPZ update cron jobs
   tags: [cron]
