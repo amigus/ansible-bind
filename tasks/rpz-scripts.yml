@@ -13,13 +13,13 @@
       ansible.builtin.file:
         path: "{{ bind_rpz_scripts_directory }}"
         state: directory
-        mode: '0755'
+        mode: "0755"
 
     - name: Copy genrpz.py
       ansible.builtin.copy:
         src: genrpz.py
         dest: "{{ bind_rpz_scripts_directory }}/genrpz.py"
-        mode: '0755'
+        mode: "0755"
       when: >
         bind_response_policy_zones |
         selectattr('genrpz', 'defined') |
@@ -29,7 +29,7 @@
       ansible.builtin.copy:
         src: update-rpz.sh
         dest: "{{ bind_rpz_scripts_directory }}/update-rpz"
-        mode: '0755'
+        mode: "0755"
 
 - name: Setup RPZ update cron jobs
   tags: [cron]
@@ -42,20 +42,14 @@
             {
               'zone': item.zone,
               'cmd': (
-                'GENRPZ_PY=' ~ bind_rpz_scripts_directory ~ '/genrpz.py ' ~
-                'RPZ_PERMS=0640 ' ~
-                'RPZ_USERGROUP=' ~ bind_usergroup ~ ' ' ~
-                'sh ' ~ bind_rpz_scripts_directory ~ '/update-rpz '
-                ~ bind_rpz_directory ~ '/' ~ item.zone ~ '.zone '
-                ~ item.url
-                ~ (
-                    (
-                      ' -Z '
-                      ~ item.zone
-                      ~ ' '
-                      ~ (item.genrpz_args | default(''))
-                    ) if (item.genrpz is defined and item.genrpz) else ''
-                  )
+                'GENRPZ_PY=' ~ bind_rpz_scripts_directory ~ '/genrpz.py '
+                if (item.genrpz is defined and item.genrpz) else '' ~
+                'RPZ_PERMS=0640 ' ~ 'RPZ_USERGROUP=' ~ bind_usergroup ~ ' ' ~
+                'sh ' ~ bind_rpz_scripts_directory ~ '/update-rpz ' ~
+                bind_rpz_directory ~ '/' ~ item.zone ~ '.zone ' ~ item.url ~
+                (
+                  ' -Z ' ~ item.zone ~ ' ' ~ (item.genrpz_args | default(''))
+                ) if (item.genrpz is defined and item.genrpz) else ''
               ),
               'cron': item.cron
             }
@@ -70,7 +64,7 @@
         day: "{{ item.cron.day | default('*') }}"
         month: "{{ item.cron.month | default('*') }}"
         weekday: "{{ item.cron.weekday | default('*') }}"
-        job: "{{ item.cmd }} && RNDC reload {{ item.zone }}"
+        job: "{{ item.cmd }} && rndc reload {{ item.zone }}"
         user: root
       loop: "{{ bind_rpz_update_jobs }}"
 
