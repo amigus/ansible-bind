@@ -18,7 +18,7 @@
     - name: Copy genrpz.py
       ansible.builtin.copy:
         src: genrpz.py
-        dest: "{{ bind_rpz_scripts_directory }}/genrpz.py"
+        dest: "{{ [bind_rpz_scripts_directory, 'genrpz.py'] | ansible.builtin.path_join}}"
         mode: "0755"
       when: >
         bind_response_policy_zones |
@@ -28,7 +28,7 @@
     - name: Copy update-rpz
       ansible.builtin.copy:
         src: update-rpz.sh
-        dest: "{{ bind_rpz_scripts_directory }}/update-rpz"
+        dest: "{{ [bind_rpz_scripts_directory, 'update-rpz'] | ansible.builtin.path_join}}"
         mode: "0755"
 
 - name: Setup RPZ update cron jobs
@@ -37,16 +37,27 @@
   block:
     - name: Generate RPZ update commands
       ansible.builtin.set_fact:
-        bind_rpz_update_jobs: >
+        bind_rpz_update_jobs: >-
           {{ bind_rpz_update_jobs | default([]) + [
             {
               'zone': item.zone,
               'cmd': (
-                'GENRPZ_PY=' ~ bind_rpz_scripts_directory ~ '/genrpz.py '
-                if (item.genrpz is defined and item.genrpz) else '' ~
-                'RPZ_PERMS=0640 ' ~ 'RPZ_USERGROUP=' ~ bind_usergroup ~ ' ' ~
-                'sh ' ~ bind_rpz_scripts_directory ~ '/update-rpz ' ~
-                bind_rpz_directory ~ '/' ~ item.zone ~ '.zone ' ~ item.url ~
+                (
+                  (
+                    'GENRPZ_PY="' ~ (
+                     [bind_rpz_scripts_directory , 'genrpz.py'] | ansible.builtin.path_join
+                   ) ~ '" '
+                  ) if (item.genrpz is defined and item.genrpz) else ''
+                ) ~
+                'RPZ_PERMS=' ~ bind_rpz_perms ~ ' RPZ_USERGROUP=' ~ bind_usergroup ~ ' ' ~
+                'sh ' ~
+                (
+                  [bind_rpz_scripts_directory, 'update-rpz'] | ansible.builtin.path_join
+                ) ~ ' ' ~
+                (
+                  [bind_rpz_directory, (item.zone ~ '.zone')] | ansible.builtin.path_join
+                ) ~ ' ' ~
+                item.url ~
                 (
                   ' -Z ' ~ item.zone ~ ' ' ~ (item.genrpz_args | default(''))
                 ) if (item.genrpz is defined and item.genrpz) else ''
@@ -70,7 +81,7 @@
 
     - name: Check for existing zone files
       ansible.builtin.stat:
-        path: "{{ bind_rpz_directory }}/{{ item.zone }}.zone"
+        path: "{{ [bind_rpz_directory, (item.zone ~ '.zone')] | ansible.builtin.path_join }}"
       register: bind_rpz_zone_files
       loop: "{{ bind_rpz_update_jobs }}"
 
@@ -78,5 +89,11 @@
       ansible.builtin.shell: "{{ item.item.cmd }}"
       register: bind_rpz_update_cmd_result
       changed_when: bind_rpz_update_cmd_result.rc == 0
+      failed_when: false
       loop: "{{ bind_rpz_zone_files.results }}"
       when: not item.stat.exists
+
+    - name: Fail if all update commands failed
+      ansible.builtin.fail:
+        msg: "More than half the RPZ update commands failed"
+      when: bind_rpz_update_cmd_result.results | selectattr('skipped', 'undefined') | selectattr('rc', 'ne', 0) | list | length > (bind_rpz_update_cmd_result.results | length / 2)
