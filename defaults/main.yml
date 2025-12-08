@@ -91,7 +91,7 @@ bind_rpz_domains: []
 # - anotherbad.net
 
 # Group ownership for RPZ files.
-bind_rpz_group: "{{ bind_usergroup | default('named') }}"
+bind_rpz_group: "{{ bind_usergroup }}"
 
 # Domains to allow through the RPZ
 bind_rpz_passthru_domains: []

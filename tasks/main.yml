@@ -43,7 +43,7 @@
   ansible.builtin.file:
     path: "{{ item }}"
     state: directory
-    group: "{{ bind_usergroup | default('named') }}"
+    group: "{{ bind_usergroup }}"
     mode: "0770"
   loop: >
     {{
