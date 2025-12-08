@@ -21,7 +21,7 @@
   tags: [rpz]
   ansible.builtin.template:
     src: rpz.j2
-    dest: "{{ bind_primary_zone_directory }}/rpz.zone"
+    dest: "{{ [bind_primary_zone_directory, 'rpz.zone'] | ansible.builtin.path_join }}"
     owner: root
     group: "{{ bind_usergroup }}"
     mode: "0640"
