@@ -1,0 +1,3 @@
+---
+bind_primary_zone_127: /etc/bind/db.127
+bind_primary_zone_localhost: /etc/bind/db.local

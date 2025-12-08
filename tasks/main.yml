@@ -3,6 +3,11 @@
   tags: [always]
   ansible.builtin.include_vars: "{{ ansible_facts.os_family }}.yml"
 
+- name: Include distribution vars
+  tags: [always]
+  ansible.builtin.include_vars: "{{ ansible_facts.distribution }}.yml"
+  failed_when: false
+
 - name: Setup named.conf
   tags: [conf]
   ansible.builtin.template:

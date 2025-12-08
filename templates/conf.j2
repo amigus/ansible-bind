@@ -135,6 +135,7 @@ zone "." IN {
 };
 
 {% endif %}
+{% if bind_primary_zone_localhost is defined %}
 zone "localhost" IN {
     type primary;
     file "{{ bind_primary_zone_localhost }}";
@@ -142,6 +143,8 @@ zone "localhost" IN {
     notify no;
 };
 
+{% endif %}
+{% if bind_primary_zone_127 is defined %}
 zone "1.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.ip6.arpa" IN {
     type primary;
     file "{{ bind_primary_zone_127 }}";
@@ -154,6 +157,7 @@ zone "127.in-addr.arpa" IN {
     allow-update { none; };
     notify no;
 };
+{% endif %}
 {% for item in bind_forward_zones %}
 
 zone "{{ item.zone }}" IN {

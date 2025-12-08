@@ -1,16 +1,24 @@
 ---
 - name: Install named
   tags: [install]
+  when: ansible_facts.os_family != 'Debian'
   ansible.builtin.package:
     name: bind
+    state: present
+
+- name: Install named (Debian/Ubuntu)
+  tags: [install]
+  when: ansible_facts.os_family == 'Debian'
+  ansible.builtin.package:
+    name: bind9
     state: present
 
 - name: Install cron
   tags: [install, cron]
   when: bind_response_policy_zones | selectattr('cron', 'defined') | list | length > 0
   block:
-    - name: Install cron on OpenSUSE
-      when: ansible_facts.os_family == 'Suse'
+    - name: Install cron
+      when: ansible_facts.os_family in ('Debian', 'SUSE')
       ansible.builtin.package:
         name: cron
         state: present
