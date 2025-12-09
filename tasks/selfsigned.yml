@@ -1,158 +1,27 @@
 ---
-- name: Create temporary directory for TLS files
-  tags: [tls]
-  ansible.builtin.tempfile:
-    state: directory
-  changed_when: true
-  delegate_to: localhost
-  register: bind_tls_tempdir
-
-- name: Set the permissions so ansible can copy the private keys
-  tags: [tls]
-  ansible.builtin.file:
-    mode: "0711"
-    path: "{{ bind_tls_tempdir.path }}"
-    state: directory
-  delegate_to: localhost
-
-- name: Check for an existing private key files
-  tags: [tls]
-  ansible.builtin.stat:
-    path: "{{ item.key_file }}"
-  register: bind_tls_key_file_stat
-  loop: "{{ bind_tls }}"
-
-- name: Generate private key(s)
-  tags: [tls]
-  when: not bind_tls_key_file_stat.results[index].stat.exists
-  block:
-    - name: Generate private key(s)
-      community.crypto.openssl_privatekey:
-        owner: "{{ lookup('env', 'USER') }}"
-        path: "{{ bind_tls_tempdir.path }}/{{ index }}.key.pem"
-        type: "{{ item.key_type | default(bind_tls_key_type) }}"
-        size: "{{ item.key_size | default(bind_tls_key_size) }}"
-      register: bind_tls_privatekeys
-      delegate_to: localhost
-      loop: "{{ bind_tls }}"
-      loop_control:
-        index_var: index
-
-    - name: Show generated private key(s) (for testing only)
-      ansible.builtin.debug:
-        msg: "{{ bind_tls_privatekeys.results[index] }}"
-      loop: "{{ bind_tls }}"
-      loop_control:
-        index_var: index
-
-    - name: Copy private key(s) to target
-      tags: [tls]
-      ansible.builtin.copy:
-        dest: "{{ item.key_file }}"
-        group: "{{ bind_usergroup }}"
-        mode: "0640"
-        src: "{{ bind_tls_privatekeys.results[index].filename }}"
-      loop: "{{ bind_tls }}"
-      loop_control:
-        index_var: index
-
-- name: Check for an existing certificate file
-  tags: [tls]
-  ansible.builtin.stat:
-    path: "{{ item.cert_file }}"
-  register: bind_tls_cert_file_stat
-  loop: "{{ bind_tls }}"
-
-- name: Use the existing private key
-  tags: [tls]
-  when: not bind_tls_cert_file_stat.results[index].stat.exists
-  block:
-    - name: Download the existing private key
-      ansible.builtin.slurp:
-        src: "{{ item.key_file }}"
-      loop: "{{ bind_tls }}"
-      loop_control:
-        index_var: index
-      register: bind_tls_key_slurped
-
-    - name: Write it into the temp directory
-      ansible.builtin.copy:
-        content: "{{ bind_tls_key_slurped.results[index].content | b64decode }}"
-        dest: "{{ bind_tls_tempdir.path }}/{{ index }}.key.pem"
-        mode: "0600"
-      delegate_to: localhost
-      loop: "{{ bind_tls }}"
-      loop_control:
-        index_var: index
-
-- name: Generate CSR
-  tags: [tls]
-  when: not bind_tls_cert_file_stat.results[index].stat.exists
-  community.crypto.openssl_csr:
-    path: "{{ bind_tls_tempdir.path }}/{{ index }}.csr.pem"
+- name: Generate the self-signed certificate(s)
+  tags: [tls, selfsigned]
+  community.crypto.x509_certificate:
+    path: "{{ bind_tls_tempdir.path }}/{{ index }}.cert.pem"
+    csr_path: "{{ bind_tls_tempdir.path }}/{{ index }}.csr.pem"
     privatekey_path: "{{ bind_tls_tempdir.path }}/{{ index }}.key.pem"
-    common_name: "{{ item.common_name | default(bind_tls_common_name) }}"
-    subject_alt_name: "{{ item.subject_alt_name | default(bind_tls_subject_alt_name) }}"
-  register: bind_tls_csrs
+    provider: selfsigned
+    selfsigned_not_after: "{{ bind_tls_selfsigned_not_after }}"
   delegate_to: localhost
   loop: "{{ bind_tls }}"
   loop_control:
     index_var: index
+  register: bind_tls_certs
 
-- name: Install a self-signed certificate
+- name: Copy certificate(s) to target
   tags: [tls, selfsigned]
-  when:
-    - bind_tls_acme_account_email is not defined
-    - not bind_tls_cert_file_stat.results[index].stat.exists
-  block:
-    - name: Gemerate the self-signed certificate(s)
-      tags: [tls, selfsigned]
-      community.crypto.x509_certificate:
-        path: "{{ bind_tls_tempdir.path }}/{{ index }}.cert.pem"
-        csr_path: "{{ bind_tls_tempdir.path }}/{{ index }}.csr.pem"
-        privatekey_path: "{{ bind_tls_tempdir.path }}/{{ index }}.key.pem"
-        provider: selfsigned
-        selfsigned_not_after: "{{ bind_tls_selfsigned_not_after }}"
-      delegate_to: localhost
-      loop: "{{ bind_tls }}"
-      loop_control:
-        index_var: index
-      register: bind_tls_certs
-
-    - name: Copy certificate(s) to target
-      tags: [tls, selfsigned]
-      ansible.builtin.copy:
-        src: "{{ bind_tls_tempdir.path }}/{{ index }}.cert.pem"
-        dest: "{{ item.cert_file }}"
-        mode: "0644"
-      loop: "{{ bind_tls }}"
-      loop_control:
-        index_var: index
-
-- name: Check if dhparam file exists
-  tags: [tls, dhparam]
-  ansible.builtin.stat:
-    path: "{{ bind_tls_dhparam_file }}"
-  register: bind_tls_dhparam_file_stat
-  when: bind_tls_dhparam_file is defined
-
-- name: Generate DH param file
-  tags: [tls, dhparam]
-  when:
-    - bind_tls_dhparam_file is defined
-    - not bind_tls_dhparam_file_stat.stat.exists
-  block:
-    - name: Generate DH params
-      community.crypto.openssl_dhparam:
-        path: "{{ bind_tls_tempdir.path }}/dhparam.pem"
-        size: "{{ bind_tls_dhparam_size }}"
-      delegate_to: localhost
-
-    - name: Copy dhparam file to target
-      ansible.builtin.copy:
-        src: "{{ bind_tls_tempdir.path }}/dhparam.pem"
-        dest: "{{ bind_tls_dhparam_file }}"
-        mode: "0644"
+  ansible.builtin.copy:
+    src: "{{ bind_tls_tempdir.path }}/{{ index }}.cert.pem"
+    dest: "{{ item.cert_file }}"
+    mode: "0644"
+  loop: "{{ bind_tls }}"
+  loop_control:
+    index_var: index
 
 - name: Remove the temporary directory for TLS files
   tags: [tls, selfsigned]
