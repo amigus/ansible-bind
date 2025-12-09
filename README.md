@@ -6,7 +6,7 @@ and/or authoritative server with optional DNS-over-TLS,
 and DNS-over-HTTP listeners
 and optional auto-updating Response Policy Zones (RPZ).
 
-The role supports Alpine, RedHat and OpenSUSE Linux variants.
+The role supports Alpine, Debian, RedHat and SUSE Linux variants.
 It renders a complete `named.conf`,
 sets up optional logging,
 manages local RPZ files,
@@ -19,7 +19,7 @@ after downloading the latest version of the blocklist.
 ## Requirements
 
 - Ansible 2.14+ (tested with 2.16+)
-- Target OS: Alpine Linux, Rocky Linux 9 (RedHat family), openSUSE Tumbleweed
+- Target OS: Alpine, Debian, RedHat or SUSE Linux
 - Python 3 available on managed hosts
 
 ## Supported features
