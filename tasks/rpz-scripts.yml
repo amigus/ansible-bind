@@ -59,8 +59,10 @@
                 ) ~ ' ' ~
                 item.url ~
                 (
-                  ' -Z ' ~ item.zone ~ ' ' ~ (item.genrpz_args | default(''))
-                ) if (item.genrpz is defined and item.genrpz) else ''
+                  (
+                    ' -Z ' ~ item.zone ~ ' ' ~ (item.genrpz_args | default(''))
+                  ) if (item.genrpz is defined and item.genrpz) else ''
+                )
               ),
               'cron': item.cron
             }
