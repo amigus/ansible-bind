@@ -1,4 +1,4 @@
-// Generated on {{ ansible_fqdn }} with Ansible {{ ansible_version.full }}
+// Generated on {{ ansible_facts['fqdn'] }} with Ansible {{ ansible_version.full }}
 {% for name, items in bind_acls.items() %}
 acl {{ name }} {
 {% for item in items %}
