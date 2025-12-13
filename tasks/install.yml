@@ -33,8 +33,7 @@
   tags: [install, selinux]
   when: ansible_facts['selinux']['status'] == 'enabled'
   community.general.seport:
-    name: dns_port_t
-    port: "{{ item }}"
+    setype: dns_port_t
+    ports: [80, 443]
     protocol: tcp
     state: present
-  loop: [80, 443]
