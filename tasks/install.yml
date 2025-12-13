@@ -28,3 +28,13 @@
       ansible.builtin.package:
         name: cronie
         state: present
+
+- name: Allow DNS-over-HTTP in SELinux
+  tags: [install, selinux]
+  when: ansible_facts['selinux']['status'] == 'enabled'
+  community.general.seport:
+    name: dns_port_t
+    port: "{{ item }}"
+    protocol: tcp
+    state: present
+  loop: [80, 443]
