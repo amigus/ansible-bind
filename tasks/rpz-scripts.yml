@@ -98,4 +98,6 @@
     - name: Fail if all update commands failed
       ansible.builtin.fail:
         msg: "More than half the RPZ update commands failed"
-      when: bind_rpz_update_cmd_result.results | selectattr('skipped', 'undefined') | selectattr('rc', 'ne', 0) | list | length > (bind_rpz_update_cmd_result.results | length / 2)
+      when:
+        - bind_rpz_update_cmd_result.results | length > 3
+        - bind_rpz_update_cmd_result.results | selectattr('skipped', 'undefined') | selectattr('rc', 'ne', 0) | list | length > (bind_rpz_update_cmd_result.results | length / 2)
