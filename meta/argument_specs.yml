@@ -231,7 +231,10 @@ argument_specs:
             required: true
           key_file:
             type: str
-            required: true
+            required: false
+          csr_file:
+            type: str
+            required: false
           cert_file:
             type: str
             required: true
@@ -278,6 +281,10 @@ argument_specs:
         elements: str
         default: []
         description: SANs for self-signed certs.
+      bind_tls_key_file:
+        type: str
+        required: false
+        description: Default private key path for self-signed certs.
       bind_tls_key_type:
         type: str
         default: RSA

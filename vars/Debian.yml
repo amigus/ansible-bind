@@ -8,4 +8,5 @@ bind_rpz_directory: /var/lib/bind
 bind_rpz_scripts_directory: /etc/bind/scripts
 bind_secondary_zone_directory: /var/cache/bind
 bind_tls_dhparam_file: /etc/bind/dhparam.pem
+bind_tls_key_file: /etc/bind/cert.key
 bind_usergroup: bind
