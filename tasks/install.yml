@@ -29,11 +29,31 @@
         name: cronie
         state: present
 
-- name: Allow DNS-over-HTTP in SELinux
+- name: Configure SELinux
   tags: [install, selinux]
   when: ansible_facts['selinux']['status'] == 'enabled'
-  community.general.seport:
-    setype: dns_port_t
-    ports: [80, 443]
-    proto: tcp
-    state: present
+  block:
+    - name: install semanage
+      ansible.builtin.package:
+        name: policycoreutils-python-utils
+        state: present
+      when: ansible_facts.os_family not in ['Debian', 'SUSE']
+    
+    - name: install semanage (Debian)
+      ansible.builtin.package:
+        name: policycoreutils-python
+        state: present
+      when: ansible_facts.os_family == 'Debian'
+
+    - name: install semanage (SUSE)
+      ansible.builtin.package:
+        name: python3-policycoreutils
+        state: present
+      when: ansible_facts.os_family == 'SUSE'
+
+    - name: Allow named to serve DoH
+      community.general.seport:
+        setype: dns_port_t
+        ports: [80, 443]
+        proto: tcp
+        state: present
