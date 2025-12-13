@@ -18,8 +18,8 @@ after downloading the latest version of the blocklist.
 
 ## Requirements
 
-- Ansible 2.14+ (tested with 2.16+)
-- Target OS: Alpine, Debian, RedHat or SUSE Linux
+- Ansible 2.19+ (tested with 2.20+)
+- Target OS: Alpine 3.21+, Debian 13+, RedHat 10+ or SUSE 15+
 - Python 3 available on managed hosts
 
 ## Supported features
