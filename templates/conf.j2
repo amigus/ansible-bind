@@ -27,7 +27,7 @@ tls {{ tls.name }} {
     prefer-server-ciphers yes;
 {% endif %}
     dhparam-file "{{ bind_tls_dhparam_file }}";
-    key-file "{{ tls.key_file }}";
+    key-file "{{ tls.key_file | default(bind_tls_key_file) }}";
 {% if bind_tls_session_tickets | default(false) %}
     session-tickets yes;
 {% endif -%}

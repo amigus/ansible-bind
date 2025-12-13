@@ -2,29 +2,12 @@
 - name: Generate the self-signed certificate(s)
   tags: [tls, selfsigned]
   community.crypto.x509_certificate:
-    path: "{{ bind_tls_tempdir.path }}/{{ index }}.cert.pem"
-    csr_path: "{{ bind_tls_tempdir.path }}/{{ index }}.csr.pem"
-    privatekey_path: "{{ bind_tls_tempdir.path }}/{{ index }}.key.pem"
+    path: "{{ item.cert_file }}"
+    csr_path: "{{ item.csr_file }}"
+    privatekey_path: "{{ item.key_file | default(bind_tls_key_file) }}"
     provider: selfsigned
     selfsigned_not_after: "{{ bind_tls_selfsigned_not_after }}"
-  delegate_to: localhost
   loop: "{{ bind_tls }}"
   loop_control:
     index_var: index
   register: bind_tls_certs
-
-- name: Copy certificate(s) to target
-  tags: [tls, selfsigned]
-  ansible.builtin.copy:
-    src: "{{ bind_tls_tempdir.path }}/{{ index }}.cert.pem"
-    dest: "{{ item.cert_file }}"
-    mode: "0644"
-  loop: "{{ bind_tls }}"
-  loop_control:
-    index_var: index
-
-- name: Remove the temporary directory for TLS files
-  tags: [tls, selfsigned]
-  ansible.builtin.file:
-    path: "{{ bind_tls_tempdir.path }}"
-    state: absent

@@ -10,3 +10,4 @@ bind_rpz_directory: /var/bind/dyn
 bind_rpz_scripts_directory: /etc/bind/scripts
 bind_secondary_zone_directory: /var/bind/sec
 bind_tls_dhparam_file: /etc/bind/dhparam.pem
+bind_tls_key_file: /etc/bind/cert.key
