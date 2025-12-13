@@ -35,5 +35,5 @@
   community.general.seport:
     setype: dns_port_t
     ports: [80, 443]
-    protocol: tcp
+    proto: tcp
     state: present
