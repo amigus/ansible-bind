@@ -121,10 +121,15 @@ bind_service_name: named
 bind_tls: []
 # e.g.,
 # - name: my-tls
-#   cert_file: /etc/named.d/cert.pem
+#   cert_file: /etc/named/cert.pem
 #   ciphers: "HIGH:!kRSA:!aNULL:!eNULL:!RC4:!3DES:!MD5:!EXP:!PSK:!SRP:!DSS:!SHA1:!SHA256:!SHA384"
-#   dhparam_file: /etc/named.d/dhparam.pem
-#   key_file: /etc/named.d/key.pem
+#   dhparam_file: /etc/named/dhparam.pem
+#   key_file: /etc/named/key.pem
+#   common_name: example.com
+#   csr_file: /etc/named/cert.csr
+#   subject_alt_name:
+#     - DNS:example.com
+#     - IP:127.0.0.1
 
 # Size of Diffie-Hellman parameters to generate if dhparam_file is missing.
 bind_tls_dhparam_size: 2048
@@ -134,12 +139,3 @@ bind_tls_key_type: RSA
 
 # Size of private key to generate if key_file is missing.
 bind_tls_key_size: 2048
-
-# Validity period for self-signed certificates if cert_file is missing; 1825 days is 5 years.
-bind_tls_selfsigned_not_after: +1825d
-
-# Subject Alternative Names for TLS certificates
-bind_tls_subject_alt_name: []
-# e.g.,
-# - DNS:example.com
-# - IP:192.168.1.1

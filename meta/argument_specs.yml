@@ -248,6 +248,9 @@ argument_specs:
             type: list
             elements: str
             required: false
+          selfsigned_not_after:
+            type: str
+            required: false
       bind_tls_ciphers:
         type: str
         required: false
@@ -295,8 +298,8 @@ argument_specs:
         description: Private key size for self-signed certs.
       bind_tls_selfsigned_not_after:
         type: str
-        default: "+1825d"
-        description: Certificate validity when using self-signed provider.
+        required: false
+        description: Certificate validity when using self-signed provider (e.g., "+1825d" is 5 years).
       bind_tls_dhparam_file:
         type: str
         required: false

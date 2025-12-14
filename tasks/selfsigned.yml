@@ -6,8 +6,13 @@
     csr_path: "{{ item.csr_file }}"
     privatekey_path: "{{ item.key_file | default(bind_tls_key_file) }}"
     provider: selfsigned
-    selfsigned_not_after: "{{ bind_tls_selfsigned_not_after }}"
+    selfsigned_not_after: "{{ item.selfsigned_not_after | default(bind_tls_selfsigned_not_after) }}"
   loop: "{{ bind_tls }}"
   loop_control:
     index_var: index
   register: bind_tls_certs
+  when:
+    - item.selfsigned_not_after is defined
+      or bind_tls_selfsigned_not_after is defined
+    - item.cert_file is defined
+    - item.csr_file is defined

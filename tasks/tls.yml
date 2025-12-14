@@ -36,12 +36,14 @@
 - name: Generate CSR
   tags: [tls, csr]
   community.crypto.openssl_csr:
+    common_name: "{{ item.common_name }}"
     path: "{{ item.csr_file }}"
     privatekey_path: "{{ item.key_file | default(bind_tls_key_file) }}"
-    common_name: "{{ item.common_name }}"
     subject_alt_name: "{{ item.subject_alt_name | default([]) }}"
   register: bind_tls_csrs
   loop: "{{ bind_tls }}"
   loop_control:
     index_var: index
-  when: item.common_name is defined
+  when:
+    - item.common_name is defined
+    - item.csr_file is defined
